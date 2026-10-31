@@ -1,0 +1,37 @@
+key: demo-lol-astrale-prev
+source: demo
+edition_source_id: lol-astrale-prev
+is_fictional: true
+verified_at: 2026-10-31
+sources:
+  - label: Règlement fictif rédigé pour le mode démonstration de NextRound
+participants: 4
+summary_30s:
+  - Format de l'an dernier, plus court qu'aujourd'hui. Il n'y avait pas de phase de groupes.
+  - Les 4 meilleures équipes de la saison régulière (non suivie ici) entraient directement en demi-finales.
+  - Élimination directe en BO5.
+circuit: >-
+  Tournoi régional de fin de saison (fictif). L'édition suivante a ajouté une phase de groupes à 8 équipes :
+  c'est pour cela que les règles sont définies par édition, et non par jeu.
+rewards:
+  - "Champion : titre et qualification pour le Mondial Astral (fictif)"
+phases:
+  - key: playoffs
+    phase_source_ids: [lol-astrale-prev-po]
+    name: Playoffs
+    type: single_elimination
+    participants: 4
+    summary: Demi-finales puis finale. Une défaite élimine.
+    formats:
+      - {type: best_of, value: 5, applies_to: Tous les matchs}
+    qualification: Les 4 premiers de la saison régulière étaient qualifiés.
+    elimination: Toute défaite est éliminatoire.
+    rounds:
+      - key: sf
+        name: Demi-finale
+        on_win: {kind: advance, label: Accès à la finale}
+        on_loss: {kind: eliminated, label: "Éliminé (3e-4e place)"}
+      - key: final
+        name: Finale
+        on_win: {kind: title, label: Champion}
+        on_loss: {kind: runner_up, label: "Finaliste (2e place)"}

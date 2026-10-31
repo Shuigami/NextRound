@@ -1,0 +1,148 @@
+"use client";
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { apiGet, type Meta, type Organization, type TeamBrief } from "./api";
+import { type FavKind, type Favorites, followedTeamIds, hasFavorite, isTeamFollowed, parseFavorites, toggleFavorite } from "./favorites";
+import { editionKey, isRevealed, isScoreHidden, isSlotHidden, matchKey, stripRecord } from "./spoiler";
+
+type Prefs = {
+  meta: Meta | null;
+  metaError: string | null;
+  ready: boolean;
+  favorites: Favorites;
+  orgs: Organization[];
+  followedTeams: number[];
+  isFav: (kind: FavKind, id: number) => boolean;
+  toggleFav: (kind: FavKind, id: number) => void;
+  isTeamFollowed: (t: TeamBrief | null | undefined) => boolean;
+  spoilerFree: boolean;
+  setSpoilerFree: (v: boolean) => void;
+  hideScore: (m: { id: number; status: string; edition: { id: number } }) => boolean;
+  editionHidden: (editionId: number) => boolean;
+  /** Bilans et scénarios d'un match : ils révèlent les résultats précédents. */
+  contextHidden: (m: { id: number; edition: { id: number } }) => boolean;
+  /** Équipe placée grâce à un résultat encore masqué. */
+  slotHidden: (m: SpoilerMatch, slot: 0 | 1) => boolean;
+  /** Nom de match sans bilan tant que le contexte est masqué. */
+  safeName: (m: SpoilerMatch) => string | null;
+  /** Comment ce match a été révélé en anti-spoil : par lui-même, avec sa compétition, ou pas du tout. */
+  revealedBy: (m: { id: number; edition: { id: number } }) => "match" | "edition" | null;
+  reveal: (kind: "match" | "edition", id: number) => void;
+  hide: (kind: "match" | "edition", id: number) => void;
+};
+
+type SpoilerMatch = { id: number; status: string; name?: string | null; edition: { id: number }; previous?: { match_id: number; type: "winner" | "loser" }[] };
+
+const Ctx = createContext<Prefs | null>(null);
+
+// Petit magasin localStorage, avec repli en mémoire si le stockage est indisponible (navigation privée).
+const memory = new Map<string, string>();
+const listeners = new Set<() => void>();
+function read(key: string): string | null {
+  try {
+    return localStorage.getItem(key) ?? memory.get(key) ?? null;
+  } catch {
+    return memory.get(key) ?? null;
+  }
+}
+function write(key: string, value: string) {
+  memory.set(key, value);
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* conservé en mémoire pour la session */
+  }
+  listeners.forEach((l) => l());
+}
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  window.addEventListener("storage", cb); // synchronise les autres onglets
+  return () => {
+    listeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+function useStored(key: string | null): string | null {
+  return useSyncExternalStore(subscribe, () => (key ? read(key) : null), () => null);
+}
+
+export function PrefsProvider({ children }: { children: React.ReactNode }) {
+  const [meta, setMeta] = useState<Meta | null>(null);
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [orgs, setOrgs] = useState<Organization[]>([]);
+
+  useEffect(() => {
+    apiGet<Meta>("/meta").then(setMeta).catch((e) => setMetaError(e.message));
+    apiGet<Organization[]>("/organizations").then(setOrgs).catch(() => setOrgs([]));
+  }, []);
+
+  // Favoris et révélations séparés par mode : un identifiant démo n'a aucun sens en données réelles.
+  const ns = meta ? `nextround:${meta.mode}` : null;
+  const favRaw = useStored(ns && `${ns}:favorites`);
+  const revealedRaw = useStored(ns && `${ns}:revealed`);
+  const spoilerFree = useStored("nextround:spoilerFree") === "1";
+
+  const favorites = useMemo(() => parseFavorites(favRaw), [favRaw]);
+  const revealed = useMemo(() => {
+    try {
+      const v = JSON.parse(revealedRaw ?? "[]");
+      return new Set<string>(Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
+    } catch {
+      return new Set<string>();
+    }
+  }, [revealedRaw]);
+
+  const toggleFav = useCallback(
+    (kind: FavKind, id: number) => {
+      if (ns) write(`${ns}:favorites`, JSON.stringify(toggleFavorite(parseFavorites(read(`${ns}:favorites`)), kind, id)));
+    },
+    [ns],
+  );
+  const setSpoilerFree = useCallback((v: boolean) => write("nextround:spoilerFree", v ? "1" : "0"), []);
+  const reveal = useCallback(
+    (kind: "match" | "edition", id: number) => {
+      if (ns) write(`${ns}:revealed`, JSON.stringify([...revealed, kind === "match" ? matchKey(id) : editionKey(id)]));
+    },
+    [ns, revealed],
+  );
+  const hide = useCallback(
+    (kind: "match" | "edition", id: number) => {
+      const key = kind === "match" ? matchKey(id) : editionKey(id);
+      if (ns) write(`${ns}:revealed`, JSON.stringify([...revealed].filter((k) => k !== key)));
+    },
+    [ns, revealed],
+  );
+
+  const value = useMemo<Prefs>(
+    () => ({
+      meta,
+      metaError,
+      ready: ns !== null,
+      favorites,
+      orgs,
+      followedTeams: followedTeamIds(favorites, orgs),
+      isFav: (k, id) => hasFavorite(favorites, k, id),
+      toggleFav,
+      isTeamFollowed: (t) => isTeamFollowed(favorites, t),
+      spoilerFree,
+      setSpoilerFree,
+      hideScore: (m) => isScoreHidden(m, spoilerFree, revealed),
+      editionHidden: (id) => spoilerFree && !revealed.has(editionKey(id)),
+      contextHidden: (m) => spoilerFree && !isRevealed(revealed, m.id, m.edition.id),
+      slotHidden: (m, slot) => isSlotHidden(m, slot, spoilerFree, revealed),
+      safeName: (m) => (m.name && spoilerFree && !isRevealed(revealed, m.id, m.edition.id) ? stripRecord(m.name) : (m.name ?? null)),
+      revealedBy: (m) =>
+        !spoilerFree ? null : revealed.has(editionKey(m.edition.id)) ? "edition" : revealed.has(matchKey(m.id)) ? "match" : null,
+      reveal,
+      hide,
+    }),
+    [meta, metaError, ns, favorites, orgs, toggleFav, spoilerFree, setSpoilerFree, revealed, reveal, hide],
+  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function usePrefs(): Prefs {
+  const v = useContext(Ctx);
+  if (!v) throw new Error("usePrefs hors de PrefsProvider");
+  return v;
+}

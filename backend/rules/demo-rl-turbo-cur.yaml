@@ -1,0 +1,76 @@
+key: demo-rl-turbo-cur
+source: demo
+edition_source_id: rl-turbo-cur
+is_fictional: true
+verified_at: 2026-10-31
+sources:
+  - label: Règlement fictif rédigé pour le mode démonstration de NextRound
+participants: 8
+summary_30s:
+  - 8 équipes dans un seul tableau à double élimination. Il faut perdre deux fois pour être éliminé.
+  - Tous les matchs se jouent en BO5, sauf la grande finale en BO7.
+  - Le champion gagne le Major et des points de circuit pour le Mondial Turbo (fictif).
+circuit: >-
+  Deuxième des trois Majors de la saison (fictive). Chaque Major rapporte des points. Les 8 meilleures
+  équipes au cumul vont au Mondial Turbo. Le barème de points n'est pas modélisé ici.
+rewards:
+  - "Champion : titre du Major et points de circuit (barème non modélisé)"
+  - "Toutes les équipes : points de circuit selon la place finale"
+phases:
+  - key: bracket
+    phase_source_ids: [rl-turbo-cur-po]
+    name: Phase finale
+    type: double_elimination
+    participants: 8
+    summary: >-
+      Les vainqueurs avancent dans le tableau principal. Les perdants descendent dans le repêchage, où une
+      nouvelle défaite élimine.
+    formats:
+      - {type: best_of, value: 5, applies_to: Tous les matchs sauf la grande finale}
+      - {type: best_of, value: 7, applies_to: Grande finale}
+    qualification: Les vainqueurs du tableau principal et du repêchage jouent la grande finale.
+    elimination: Deux défaites éliminent.
+    rounds:
+      - key: ub_qf
+        name: Quart du tableau principal
+        section: upper
+        on_win: {kind: advance, label: Accès aux demi-finales du tableau principal}
+        on_loss: {kind: lower_bracket, label: "Bascule au 1er tour du repêchage (pas encore éliminé)"}
+      - key: lb_r1
+        name: Repêchage, 1er tour
+        section: lower
+        on_win: {kind: advance, label: Accès au 2e tour du repêchage}
+        on_loss: {kind: eliminated, label: "Éliminé (7e-8e place)"}
+      - key: ub_sf
+        name: Demi-finale du tableau principal
+        section: upper
+        on_win: {kind: advance, label: Accès à la finale du tableau principal}
+        on_loss: {kind: lower_bracket, label: "Bascule au 2e tour du repêchage (pas encore éliminé)"}
+      - key: lb_r2
+        name: Repêchage, 2e tour
+        section: lower
+        on_win: {kind: advance, label: Accès au 3e tour du repêchage}
+        on_loss: {kind: eliminated, label: "Éliminé (5e-6e place)"}
+      - key: ub_final
+        name: Finale du tableau principal
+        section: upper
+        on_win: {kind: advance, label: Accès à la grande finale}
+        on_loss: {kind: lower_bracket, label: "Bascule en finale du repêchage (pas encore éliminé)"}
+      - key: lb_r3
+        name: Repêchage, 3e tour
+        section: lower
+        on_win: {kind: advance, label: Accès à la finale du repêchage}
+        on_loss: {kind: eliminated, label: "Éliminé (4e place)"}
+      - key: lb_final
+        name: Finale du repêchage
+        section: lower
+        on_win: {kind: advance, label: Accès à la grande finale}
+        on_loss: {kind: eliminated, label: "Éliminé (3e place)"}
+      - key: grand_final
+        name: Grande finale
+        section: final
+        on_win: {kind: title, label: Champion du Major}
+        on_loss: {kind: runner_up, label: "Finaliste (2e place)"}
+    exceptions:
+      - Pas de bracket reset en grande finale.
+      - "Au 2e tour du repêchage, les perdants des demi-finales principales affrontent les rescapés du 1er tour."

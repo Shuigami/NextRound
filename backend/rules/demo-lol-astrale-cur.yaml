@@ -1,0 +1,62 @@
+key: demo-lol-astrale-cur
+source: demo
+edition_source_id: lol-astrale-cur
+is_fictional: true
+verified_at: 2026-10-31
+sources:
+  - label: Règlement fictif rédigé pour le mode démonstration de NextRound
+participants: 8
+summary_30s:
+  - 8 équipes réparties en 2 groupes de 4.
+  - Dans chaque groupe, tout le monde s'affronte une fois en BO1. Les 2 premiers passent en playoffs.
+  - "Playoffs à élimination directe en BO5 : demi-finales puis finale."
+  - Le vainqueur remporte le titre et une place au Mondial Astral (fictif).
+circuit: >-
+  Tournoi régional de fin de saison (fictif). Il clôt l'année et désigne le représentant de la région
+  au Mondial Astral. Aucun point de circuit n'est attribué.
+rewards:
+  - "Champion : titre et qualification pour le Mondial Astral (fictif)"
+  - "Finaliste : aucune qualification"
+phases:
+  - key: groups
+    phase_source_ids: [lol-astrale-cur-ga, lol-astrale-cur-gb]
+    name: Phase de groupes
+    type: round_robin
+    participants: 8
+    group_count: 2
+    summary: Deux groupes de 4. Chaque équipe joue une fois contre les trois autres de son groupe.
+    formats:
+      - {type: best_of, value: 1, applies_to: Tous les matchs de groupe}
+    qualification: Les 2 premiers de chaque groupe se qualifient pour les playoffs.
+    elimination: Les 3e et 4e de chaque groupe sont éliminés.
+    rank_outcomes:
+      - {ranks: [1], kind: qualified, label: "Qualifié pour les playoffs (1er du groupe, affronte un 2e)"}
+      - {ranks: [2], kind: qualified, label: "Qualifié pour les playoffs (2e du groupe, affronte un 1er)"}
+      - {ranks: [3, 4], kind: eliminated, label: "Éliminé (3e ou 4e du groupe)"}
+    tiebreakers:
+      - {key: head_to_head, label: "Égalité à deux : la confrontation directe départage"}
+      - {key: tiebreaker_match, label: "Égalité à trois ou plus : matchs de départage en BO1"}
+    details:
+      - Le classement se fait au nombre de victoires.
+      - Le 1er du groupe A affronte le 2e du groupe B en demi-finale, et inversement.
+  - key: playoffs
+    phase_source_ids: [lol-astrale-cur-po]
+    name: Playoffs
+    type: single_elimination
+    participants: 4
+    summary: Tableau à élimination directe à 4 équipes. Une défaite élimine.
+    formats:
+      - {type: best_of, value: 5, applies_to: Demi-finales et finale}
+    qualification: Les vainqueurs des demi-finales jouent la finale.
+    elimination: Toute défaite est éliminatoire. Pas de match pour la 3e place.
+    rounds:
+      - key: sf
+        name: Demi-finale
+        on_win: {kind: advance, label: Accès à la finale}
+        on_loss: {kind: eliminated, label: "Éliminé (3e-4e place)"}
+      - key: final
+        name: Finale
+        on_win: {kind: title, label: "Champion et qualifié pour le Mondial Astral (fictif)"}
+        on_loss: {kind: runner_up, label: "Finaliste (2e place)"}
+    exceptions:
+      - Il n'y a pas de match pour la 3e place.

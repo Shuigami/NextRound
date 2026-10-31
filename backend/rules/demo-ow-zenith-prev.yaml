@@ -1,0 +1,30 @@
+key: demo-ow-zenith-prev
+source: demo
+edition_source_id: ow-zenith-prev
+is_fictional: true
+verified_at: 2026-10-31
+sources:
+  - label: Règlement fictif rédigé pour le mode démonstration de NextRound
+participants: 2
+summary_30s:
+  - Seule la finale de cette saison est enregistrée dans la démo.
+  - La finale se jouait en premier à 4 manches (FT4).
+circuit: Saison 2 de la Ligue Zénith (fictive). La saison régulière n'est pas disponible dans les données.
+rewards:
+  - "Champion : titre de la saison"
+phases:
+  - key: playoffs
+    phase_source_ids: [ow-zenith-prev-po]
+    name: Playoffs
+    type: single_elimination
+    participants: 2
+    summary: Finale unique.
+    formats:
+      - {type: first_to, value: 4, applies_to: Finale}
+    qualification: Les finalistes venaient de la saison régulière. Elle n'est pas enregistrée.
+    elimination: Le perdant de la finale termine 2e.
+    rounds:
+      - key: final
+        name: Finale
+        on_win: {kind: title, label: Champion de la saison}
+        on_loss: {kind: runner_up, label: "Finaliste (2e place)"}

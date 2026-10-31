@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0c10;
+  --surface: #12151b;
+  --surface-2: #191d25;
+  --surface-3: #222733;
+  --line: #2a303c;
+  --text: #e8eaef;
+  --muted: #9aa2b1;
+  --faint: #8a92a2;
+  --brand: #8ea2ff;
+  --live: #ff5d5d;
+  --ok: #4fd18b;
+  --bad: #ff7a7a;
+  --warn: #f2c14e;
+  --info: #7cc4ff;
+  --game-lol: #c8aa6e;
+  --game-valorant: #ff4655;
+  --game-rl: #3d9bff;
+  --game-ow: #f99e1a;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-brand: var(--brand);
+  --color-live: var(--live);
+  --color-ok: var(--ok);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+  --font-sans: var(--font-sans-app);
+  --font-display: var(--font-display-app);
+  --font-mono: var(--font-mono-app);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans-app), system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--brand) 40%, transparent);
+  color: var(--text);
+}
+
+html {
+  scrollbar-color: var(--surface-3) var(--bg);
+  accent-color: var(--brand);
+  caret-color: var(--brand);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot {
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+}

@@ -1,0 +1,63 @@
+key: demo-ow-zenith-cur
+source: demo
+edition_source_id: ow-zenith-cur
+is_fictional: true
+verified_at: 2026-10-31
+sources:
+  - label: Règlement fictif rédigé pour le mode démonstration de NextRound
+participants: 6
+summary_30s:
+  - Saison régulière à 6 équipes. Chaque équipe affronte une fois chacune des autres.
+  - Les matchs se jouent en « premier à 3 manches » (FT3).
+  - Les 4 premiers vont en playoffs, les 2 derniers sont éliminés.
+  - Playoffs en élimination directe. La finale se joue en premier à 4 manches (FT4).
+circuit: >-
+  Saison 3 sur 4 de la Ligue Zénith (fictive). Le champion se qualifie pour le Grand Final annuel.
+  Le classement de la saison ne rapporte rien d'autre.
+rewards:
+  - "Champion : titre de la saison et qualification pour le Grand Final annuel (fictif)"
+phases:
+  - key: regular
+    phase_source_ids: [ow-zenith-cur-rs]
+    name: Saison régulière
+    type: round_robin
+    participants: 6
+    summary: Poule unique. Chaque équipe joue 5 matchs, un contre chaque adversaire.
+    formats:
+      - {type: first_to, value: 3, applies_to: Tous les matchs de saison régulière}
+    qualification: Les 4 premiers se qualifient pour les playoffs.
+    elimination: Les 5e et 6e sont éliminés.
+    rank_outcomes:
+      - {ranks: [1], kind: qualified, label: "Qualifié pour les playoffs (1er, affronte le 4e)"}
+      - {ranks: [2], kind: qualified, label: "Qualifié pour les playoffs (2e, affronte le 3e)"}
+      - {ranks: [3], kind: qualified, label: "Qualifié pour les playoffs (3e, affronte le 2e)"}
+      - {ranks: [4], kind: qualified, label: "Qualifié pour les playoffs (4e, affronte le 1er)"}
+      - {ranks: [5, 6], kind: eliminated, label: "Éliminé (5e ou 6e)"}
+    tiebreakers:
+      - {key: head_to_head, label: "Égalité à deux : confrontation directe"}
+      - {key: game_differential, label: "Égalité à trois ou plus : différence de manches gagnées et perdues"}
+      - {key: tiebreaker_match, label: "Égalité persistante : match d'appui en FT3"}
+    details:
+      - Classement au nombre de matchs gagnés. Un match nul est impossible en FT3.
+    exceptions:
+      - En cas de forfait, le match compte comme une victoire 3-0 pour l'adversaire.
+  - key: playoffs
+    phase_source_ids: [ow-zenith-cur-po]
+    name: Playoffs
+    type: single_elimination
+    participants: 4
+    summary: Demi-finales en FT3 puis finale en FT4.
+    formats:
+      - {type: first_to, value: 3, applies_to: Demi-finales}
+      - {type: first_to, value: 4, applies_to: Finale}
+    qualification: Les vainqueurs des demi-finales jouent la finale.
+    elimination: Toute défaite est éliminatoire.
+    rounds:
+      - key: sf
+        name: Demi-finale
+        on_win: {kind: advance, label: Accès à la finale}
+        on_loss: {kind: eliminated, label: "Éliminé (3e-4e place)"}
+      - key: final
+        name: Finale
+        on_win: {kind: title, label: "Champion de la saison et qualifié pour le Grand Final (fictif)"}
+        on_loss: {kind: runner_up, label: "Finaliste (2e place)"}

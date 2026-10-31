@@ -1,0 +1,85 @@
+key: demo-valorant-vanguard-cur
+source: demo
+edition_source_id: valorant-vanguard-cur
+is_fictional: true
+verified_at: 2026-10-31
+sources:
+  - label: Règlement fictif rédigé pour le mode démonstration de NextRound
+participants: 8
+summary_30s:
+  - 8 équipes s'affrontent en ronde suisse. À chaque ronde, on affronte une équipe qui a le même bilan.
+  - 2 victoires qualifient pour les playoffs, 2 défaites éliminent.
+  - Les 4 qualifiés jouent des playoffs en double élimination. Il faut perdre deux fois pour sortir.
+  - La grande finale se joue en BO5. Le champion obtient une place au Mondial Vanguard (fictif).
+circuit: >-
+  Dernier Masters de la saison (fictif). Le champion est qualifié pour le Mondial Vanguard. Les autres équipes
+  gardent leurs chances via leur championnat régional, non modélisé ici.
+rewards:
+  - "Champion : titre et qualification pour le Mondial Vanguard (fictif)"
+  - "Finaliste : aucune qualification directe"
+phases:
+  - key: swiss
+    phase_source_ids: [valorant-vanguard-cur-sw]
+    name: Phase suisse
+    type: swiss
+    participants: 8
+    summary: >-
+      Ronde suisse : on ne joue pas contre tout le monde. À chaque ronde, les équipes au même bilan s'affrontent
+      jusqu'à atteindre 2 victoires ou 2 défaites.
+    formats:
+      - {type: best_of, value: 1, applies_to: Ronde 1}
+      - {type: best_of, value: 3, applies_to: "Matchs décisifs (qualification ou élimination en jeu)"}
+    qualification: 2 victoires qualifient pour les playoffs (4 équipes au total).
+    elimination: 2 défaites éliminent (4 équipes au total).
+    wins_to_qualify: 2
+    losses_to_eliminate: 2
+    swiss_qualified: {kind: qualified, label: Qualifié pour les playoffs}
+    swiss_eliminated: {kind: eliminated, label: Éliminé de la compétition}
+    pairing: >-
+      Ronde 1 tirée au sort. Ensuite, les équipes au même bilan sont tirées au sort entre elles, sans revanche.
+    details:
+      - Après la ronde 2, deux équipes sont à 2-0, deux à 0-2 et quatre à 1-1. Les 1-1 jouent une dernière ronde décisive.
+      - "Les équipes à 2-0 sont têtes de série en playoffs : elles affrontent les qualifiés à 2-1."
+    exceptions:
+      - Un match reporté conserve sa place dans la ronde. La ronde suivante attend son résultat.
+  - key: playoffs
+    phase_source_ids: [valorant-vanguard-cur-po]
+    name: Playoffs
+    type: double_elimination
+    participants: 4
+    summary: >-
+      Double élimination : une première défaite envoie dans le tableau de repêchage (lower bracket).
+      Une seconde défaite élimine.
+    formats:
+      - {type: best_of, value: 3, applies_to: Tous les matchs sauf la grande finale}
+      - {type: best_of, value: 5, applies_to: Grande finale}
+    qualification: Le vainqueur du tableau principal et celui du repêchage se retrouvent en grande finale.
+    elimination: Une défaite dans le tableau de repêchage élimine.
+    rounds:
+      - key: ub_sf
+        name: Demi-finale du tableau principal
+        section: upper
+        on_win: {kind: advance, label: Accès à la finale du tableau principal}
+        on_loss: {kind: lower_bracket, label: "Bascule dans le tableau de repêchage (pas encore éliminé)"}
+      - key: lb_r1
+        name: Repêchage, 1er tour
+        section: lower
+        on_win: {kind: advance, label: Accès à la finale du repêchage}
+        on_loss: {kind: eliminated, label: "Éliminé (4e place)"}
+      - key: ub_final
+        name: Finale du tableau principal
+        section: upper
+        on_win: {kind: advance, label: Accès à la grande finale}
+        on_loss: {kind: lower_bracket, label: "Bascule en finale du repêchage (pas encore éliminé)"}
+      - key: lb_final
+        name: Finale du repêchage
+        section: lower
+        on_win: {kind: advance, label: Accès à la grande finale}
+        on_loss: {kind: eliminated, label: "Éliminé (3e place)"}
+      - key: grand_final
+        name: Grande finale
+        section: final
+        on_win: {kind: title, label: "Champion et qualifié pour le Mondial Vanguard (fictif)"}
+        on_loss: {kind: runner_up, label: "Finaliste (2e place)"}
+    exceptions:
+      - "Pas de « bracket reset » : l'équipe venue du repêchage n'a pas besoin de gagner deux grandes finales."
