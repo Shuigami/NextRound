@@ -218,3 +218,6 @@ class DemoProvider:
 
     def fetch_rosters(self, team_source_ids):
         return Batch()  # les effectifs sont déjà fournis par build()
+
+    def fetch_brackets(self, phases):
+        return Batch()  # les liens sont déjà fournis par build()

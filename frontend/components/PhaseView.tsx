@@ -6,6 +6,7 @@ import type { PhaseDetail, PhaseRules, StandingRow } from "@/lib/api";
 import { usePrefs } from "@/lib/prefs";
 import { OutcomeTag } from "./format/Explainers";
 import { Icon } from "./Icon";
+import { columnsFromLinks, columnsFromRules } from "@/lib/bracket";
 import { BracketTree } from "./BracketTree";
 import { MatchList } from "./MatchCard";
 import { Chip, Empty, TeamLogo } from "./ui";
@@ -99,9 +100,15 @@ export function BracketView({ phase, rules }: { phase: PhaseDetail; rules?: Phas
   const [view, setView] = useState<"bracket" | "list">(() =>
     typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches ? "bracket" : "list",
   )
-  const rounds = rules?.rounds ?? [];
-  const unknown = phase.matches.filter((m) => !rounds.some((r) => r.key === m.bracket_round));
-  if (!rounds.length) return <MatchList matches={phase.matches} showCompetition={false} />;
+  // Tours du règlement s'il existe, sinon reconstruits depuis les liens du fournisseur ; sans l'un ni l'autre, une liste.
+  const fromRules = !!rules?.rounds.length;
+  const columns = fromRules
+    ? columnsFromRules(phase.matches, rules!.rounds, rules!.type === "double_elimination")
+    : columnsFromLinks(phase.matches);
+  if (!columns) return <MatchList matches={phase.matches} showCompetition={false} />;
+  const placed = new Set(columns.flatMap((c) => c.matches));
+  const unknown = phase.matches.filter((m) => !placed.has(m.id));
+  const byId = new Map(phase.matches.map((m) => [m.id, m]));
   return (
     <div className="space-y-3">
       <div className="flex gap-2" role="group" aria-label="Affichage du tableau">
@@ -113,11 +120,11 @@ export function BracketView({ phase, rules }: { phase: PhaseDetail; rules?: Phas
         </Chip>
       </div>
       {view === "bracket" ? (
-        <BracketTree matches={phase.matches} rules={rules!} />
+        <BracketTree matches={phase.matches} columns={columns} />
       ) : (
         <div className="space-y-4">
-          {rounds.map((r) => {
-            const ms = phase.matches.filter((m) => m.bracket_round === r.key);
+          {columns.map((r) => {
+            const ms = r.matches.map((id) => byId.get(id)!);
             return ms.length ? (
               <div key={r.key}>
                 <h3 className="mb-1.5 text-sm font-semibold">{r.name}</h3>
@@ -127,9 +134,14 @@ export function BracketView({ phase, rules }: { phase: PhaseDetail; rules?: Phas
           })}
         </div>
       )}
+      {!fromRules && (
+        <p className="text-xs text-muted">
+          Tableau reconstruit à partir des liens entre matchs fournis par PandaScore. Noms des tours d&apos;après le fournisseur.
+        </p>
+      )}
       {unknown.length > 0 && (
         <div>
-          <h3 className="mb-1.5 text-sm font-semibold">Tour non identifié</h3>
+          <h3 className="mb-1.5 text-sm font-semibold">{fromRules ? "Tour non identifié" : "Hors tableau"}</h3>
           <MatchList matches={unknown} showCompetition={false} />
         </div>
       )}

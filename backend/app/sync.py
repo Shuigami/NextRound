@@ -12,6 +12,7 @@ from .providers.base import Batch, Provider, PTeam
 
 log = logging.getLogger("nextround.sync")
 ROSTER_MAX_AGE = timedelta(hours=24)
+BRACKET_WINDOW = timedelta(days=14)
 
 
 def get_provider() -> Provider:
@@ -82,7 +83,15 @@ def apply_batch(db: Session, source: str, batch: Batch, now: datetime) -> int:
     for e in batch.editions.values():
         if e.winner_team_source_id and (w := team_ref(e.winner_team_source_id)):
             cache[(Edition, e.source_id)].winner_team_id = w.id
+    def phase_ref(sid):
+        ph = cache.get((Phase, sid)) or db.scalar(select(Phase).where(Phase.source == source, Phase.source_id == sid))
+        cache[(Phase, sid)] = ph
+        return ph
+
     for m in batch.matches.values():
+        phase = phase_ref(m.phase_source_id)
+        if phase is None:
+            continue  # phase inconnue : le match reviendra avec sa hiérarchie dans un prochain lot
         existing = cache.get((Match, m.source_id)) or db.scalar(
             select(Match).where(Match.source == source, Match.source_id == m.source_id)
         )
@@ -90,12 +99,13 @@ def apply_batch(db: Session, source: str, batch: Batch, now: datetime) -> int:
         if existing and existing.source_modified_at and m.modified_at and m.modified_at < existing.source_modified_at:
             continue
         t1, t2, w = team_ref(m.team1_source_id), team_ref(m.team2_source_id), team_ref(m.winner_source_id)
-        _upsert(db, Match, source, m.source_id, cache, phase=cache[(Phase, m.phase_source_id)], game=m.game, name=m.name,
+        links = {} if m.previous is None else {"previous": m.previous}
+        _upsert(db, Match, source, m.source_id, cache, phase=phase, game=m.game, name=m.name,
                 status=m.status, scheduled_at=m.scheduled_at, begin_at=m.begin_at, end_at=m.end_at,
                 original_scheduled_at=m.original_scheduled_at, rescheduled=m.rescheduled, match_type=m.match_type,
                 number_of_games=m.number_of_games, team1=t1, team2=t2, score1=m.score1, score2=m.score2,
                 winner_id=w.id if w else None, forfeit=m.forfeit, draw=m.draw, bracket_round=m.bracket_round,
-                previous=m.previous, streams=m.streams, source_modified_at=m.modified_at, synced_at=now)
+                streams=m.streams, source_modified_at=m.modified_at, synced_at=now, **links)
     return len(batch.matches) + len(batch.teams)
 
 
@@ -127,7 +137,25 @@ def run_sync(db: Session, provider: Provider | None = None) -> dict:
             db.commit()
             report[resource] = f"erreur : {exc}"
 
+    # Tableaux des phases à élimination en cours ou récentes : 1 requête par phase, 20 au plus par cycle.
     now = datetime.now(UTC)
+    recent = (Phase.end_at.is_(None)) | (Phase.end_at > now - BRACKET_WINDOW)
+    bracket_phases = db.execute(
+        select(Phase.source_id, Competition.game).join(Edition, Phase.edition_id == Edition.id).join(Competition)
+        .where(Phase.source == src, Phase.has_bracket.is_(True), recent,
+               (Phase.begin_at.is_(None)) | (Phase.begin_at < now + BRACKET_WINDOW))
+        .order_by(Phase.begin_at.desc()).limit(20)
+    ).all()
+    if bracket_phases:
+        try:
+            n = apply_batch(db, src, provider.fetch_brackets([(p, g) for p, g in bracket_phases]), now)
+            _record(db, src, "brackets", now, n)
+        except Exception as exc:
+            db.rollback()
+            log.exception("Échec de synchronisation des tableaux")
+            _record(db, src, "brackets", now, error=str(exc)[:500])
+        db.commit()
+
     stale = db.scalars(
         select(Team.source_id).where(Team.source == src, (Team.roster_synced_at.is_(None)) | (Team.roster_synced_at < now - ROSTER_MAX_AGE))
         .limit(200)

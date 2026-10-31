@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { Match, PhaseRules } from "@/lib/api";
+import type { Match } from "@/lib/api";
+import type { Column } from "@/lib/bracket";
 import { feedLabel, fmtDay, fmtTime } from "@/lib/format";
 import { usePrefs } from "@/lib/prefs";
 import { Icon, StateGlyph } from "./Icon";
@@ -57,7 +58,7 @@ function MiniMatch({ m }: { m: Match }) {
  * Double élimination : tableau principal en haut, repêchage en bas, finale à droite sur les deux lignes.
  * Les descentes « perdant → repêchage » ne sont pas tracées (elles croiseraient tout) : la place vide l'indique en texte.
  */
-export function BracketTree({ matches, rules }: { matches: Match[]; rules: PhaseRules }) {
+export function BracketTree({ matches, columns }: { matches: Match[]; columns: Column[] }) {
   const { hideScore, isTeamFollowed } = usePrefs();
   const box = useRef<HTMLDivElement>(null);
   const [paths, setPaths] = useState<Path[]>([]);
@@ -65,10 +66,10 @@ export function BracketTree({ matches, rules }: { matches: Match[]; rules: Phase
   const [overflow, setOverflow] = useState(false);
   const byId = new Map(matches.map((m) => [m.id, m]));
 
-  const double = rules.type === "double_elimination";
-  const upper = rules.rounds.filter((r) => (double ? r.section === "upper" : true));
-  const lower = double ? rules.rounds.filter((r) => r.section === "lower") : [];
-  const finals = double ? rules.rounds.filter((r) => r.section === "final") : [];
+  const double = columns.some((c) => c.section === "lower");
+  const upper = columns.filter((c) => c.section === "upper" || c.section === null);
+  const lower = columns.filter((c) => c.section === "lower");
+  const finals = columns.filter((c) => c.section === "final");
   const firstFinalCol = Math.max(upper.length, lower.length) + 1;
   const cells = [
     ...upper.map((r, i) => ({ r, col: i + 1, row: "1" })),
@@ -139,7 +140,7 @@ export function BracketTree({ matches, rules }: { matches: Match[]; rules: Phase
           ))}
         </svg>
         {cells.map(({ r, col, row }) => {
-          const ms = matches.filter((m) => m.bracket_round === r.key);
+          const ms = r.matches.map((id) => byId.get(id)!).filter(Boolean);
           return (
             <div key={r.key} className="flex flex-col" style={{ gridColumn: col, gridRow: row }}>
               <div className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted">

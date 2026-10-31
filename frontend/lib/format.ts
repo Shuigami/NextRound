@@ -1,5 +1,6 @@
 import type { StateIcon } from "@/components/Icon";
 import type { Game, MatchStatus } from "./api";
+import { matchLabel } from "./bracket";
 
 export const GAMES: Record<Game, { label: string; short: string; color: string }> = {
   lol: { label: "League of Legends", short: "LoL", color: "var(--game-lol)" },
@@ -52,7 +53,7 @@ export const STATUS: Record<MatchStatus, { label: string; icon: StateIcon }> = {
 /** D'où viendra une équipe encore inconnue (ou masquée par l'anti-spoil). */
 export function feedLabel(link: { type: "winner" | "loser"; name: string | null } | undefined): string {
   if (!link?.name) return "À déterminer";
-  return `${link.type === "winner" ? "Vainqueur" : "Perdant"} : ${link.name}`;
+  return `${link.type === "winner" ? "Vainqueur" : "Perdant"} : ${matchLabel(link.name)}`;
 }
 
 /** Format de série en clair. BO5 = premier à 3 victoires. */

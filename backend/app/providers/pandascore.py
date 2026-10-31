@@ -51,7 +51,11 @@ def map_match(m: dict, game: str, batch: Batch) -> None:
     batch.phases[ph_id] = PPhase(
         ph_id, ed_id, tour.get("name") or "Phase", _dt(tour.get("begin_at")), _dt(tour.get("end_at")), bool(tour.get("has_bracket"))
     )
+    add_match(m, game, ph_id, batch)
 
+
+def add_match(m: dict, game: str, ph_id: str, batch: Batch) -> None:
+    """Le match lui-même (équipes, score, liens), rattaché à une phase déjà connue."""
     team_ids: list[str | None] = []
     for opp in (m.get("opponents") or [])[:2]:
         t = opp.get("opponent") or {}
@@ -96,8 +100,9 @@ def map_match(m: dict, game: str, batch: Batch) -> None:
             if s.get("raw_url")
         ],
         modified_at=_dt(m.get("modified_at")),
+        # Les listes de matchs ne portent pas previous_matches (seul /brackets le fait) : None = inconnu, on ne touche pas.
         previous=[{"source_id": str(p["match_id"]), "type": p.get("type", "winner")}
-                  for p in m.get("previous_matches") or [] if p.get("match_id")],
+                  for p in m.get("previous_matches") or [] if p.get("match_id")] if "previous_matches" in m else None,
     )
 
 
@@ -163,6 +168,14 @@ class PandaScoreProvider:
                 (f"{g}:past", lambda g=g: self._matches(g, "past", {"sort": "-scheduled_at"}, 2)),
             ]
         return res
+
+    def fetch_brackets(self, phases: list[tuple[str, str]]) -> Batch:
+        """Tableaux des phases demandées (source_id, jeu) : apporte les liens « vainqueur/perdant de »."""
+        batch = Batch()
+        for ph_id, game in phases:
+            for m in self._get_all(f"/tournaments/{ph_id}/brackets", {}, 2):
+                add_match(m, game, ph_id, batch)
+        return batch
 
     def fetch_rosters(self, team_source_ids: list[str]) -> Batch:
         batch = Batch()

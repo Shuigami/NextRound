@@ -171,9 +171,11 @@ si PostgreSQL est indisponible.
 - **Aucun fichier de règles réel n'est fourni.** Les six fichiers livrés décrivent les compétitions fictives de la démo. En mode
   PandaScore, les éditions affichent « Format non documenté » tant que vous n'avez pas ajouté leurs règles, vérifiées sur le
   règlement officiel.
-- PandaScore ne donne pas le tour de chaque match dans un tableau. Les tableaux réels s'affichent donc en liste, sans vue
-  par tour, sans traits de liaison et sans scénario, tant que `bracket_round` n'est pas renseigné. Les liens entre matchs
-  (`previous_matches`) ne figurent que sur `/tournaments/{id}/brackets`, que la synchronisation n'appelle pas encore.
+- Tableaux réels : la synchronisation appelle `/tournaments/{id}/brackets` pour les 20 phases à élimination les plus
+  récentes (fenêtre de 14 jours). Les colonnes sont déduites des liens `previous_matches` : tour = profondeur dans le graphe,
+  repêchage = match alimenté par un perdant, grande finale = match alimenté par les deux tableaux. Les noms de tours viennent
+  du fournisseur (traduits quand ils sont standard). Sans fichier de règles, ces tableaux n'ont toujours pas de scénario
+  « Ce que ce match change », et un match sans lien apparaît sous « Hors tableau ».
 - Les organisations PandaScore sont déduites du nom normalisé des équipes (même nom dans plusieurs jeux = même organisation).
   Des regroupements erronés restent possibles.
 - Les classements affichés sont recalculés à partir des matchs, sans les départages officiels. Les égalités sont signalées par

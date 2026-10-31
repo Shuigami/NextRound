@@ -88,7 +88,8 @@ class PMatch:
     forfeit: bool = False
     draw: bool = False
     bracket_round: str | None = None
-    previous: list[dict] = field(default_factory=list)  # [{"source_id", "type": "winner" | "loser"}]
+    # [{"source_id", "type": "winner" | "loser"}] ; None = inconnu (ne pas écraser l'existant)
+    previous: list[dict] | None = field(default_factory=list)
     streams: list[dict] = field(default_factory=list)
     modified_at: datetime | None = None
 
@@ -111,4 +112,8 @@ class Provider(Protocol):
 
     def fetch_rosters(self, team_source_ids: list[str]) -> Batch:
         """Effectifs des équipes demandées."""
+        ...
+
+    def fetch_brackets(self, phases: list[tuple[str, str]]) -> Batch:
+        """Matchs des tableaux (phase source_id, jeu), avec leurs liens entre matchs."""
         ...

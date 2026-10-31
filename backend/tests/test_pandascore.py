@@ -76,3 +76,25 @@ def test_http_error_raises_and_missing_token_refused():
         PandaScoreProvider("t", "", client=client, sleep=lambda s: None).fetch_rosters(["1"])
     with pytest.raises(PandaScoreError):
         PandaScoreProvider("", "")
+
+
+def test_list_payload_without_previous_matches_means_unknown_links():
+    b = Batch()
+    map_match(MATCH, "lol", b)
+    assert b.matches["101"].previous is None  # ne doit pas effacer des liens déjà connus
+
+
+def test_fetch_brackets_maps_links_onto_known_phase():
+    bracket = [
+        {"id": 3, "name": "Grand Final: TBD vs TBD", "status": "not_started", "tournament_id": 700, "opponents": [], "results": [],
+         "previous_matches": [{"type": "winner", "match_id": 1}, {"type": "winner", "match_id": 2}]},
+        {"id": 1, "name": "Semifinal 1: TL vs G2", "status": "finished", "tournament_id": 700, "winner_id": 2, "winner_type": "Team",
+         "opponents": MATCH["opponents"], "results": MATCH["results"], "previous_matches": []},
+    ]
+    client = httpx.Client(base_url="https://x", transport=httpx.MockTransport(
+        lambda r: httpx.Response(200, json=bracket) if r.url.path == "/tournaments/700/brackets" else httpx.Response(404)))
+    b = PandaScoreProvider("t", "", client=client, sleep=lambda s: None).fetch_brackets([("700", "lol")])
+    gf = b.matches["3"]
+    assert gf.phase_source_id == "700" and gf.game == "lol"
+    assert gf.previous == [{"source_id": "1", "type": "winner"}, {"source_id": "2", "type": "winner"}]
+    assert b.matches["1"].previous == [] and b.matches["1"].winner_source_id == "2"

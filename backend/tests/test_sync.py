@@ -68,3 +68,15 @@ def test_older_provider_version_does_not_overwrite_newer(db):
     apply_batch(db, SRC, old, now)
     db.commit()
     assert db.scalar(select(Match.score1).where(Match.source == SRC, Match.source_id == "lol-a1")) == 1
+
+
+def test_unknown_links_do_not_erase_known_ones(db):
+    now = datetime.now(UTC)
+    apply_batch(db, SRC, build(), now)
+    db.commit()
+    b = build()
+    b.matches["lol-f"].previous = None  # ex. liste « upcoming » PandaScore, sans previous_matches
+    apply_batch(db, SRC, b, now)
+    db.commit()
+    f = db.scalar(select(Match).where(Match.source == SRC, Match.source_id == "lol-f"))
+    assert [p["source_id"] for p in f.previous] == ["lol-s1", "lol-s2"]

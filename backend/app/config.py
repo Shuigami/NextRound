@@ -6,7 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Chemin absolu : le .env du backend est lu quel que soit le dossier de lancement.
+    model_config = SettingsConfigDict(env_file=Path(__file__).resolve().parent.parent / ".env", extra="ignore")
 
     # "demo" sert des données fictives, "pandascore" des données réelles. Les deux ne se mélangent jamais.
     data_mode: Literal["demo", "pandascore"] = "demo"
