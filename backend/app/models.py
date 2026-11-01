@@ -161,9 +161,12 @@ class SyncState(Base):
 class User(Base):
     """Compte facultatif : il ne sert qu'à synchroniser les préférences (favoris, anti-spoil) entre appareils."""
     __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("google_sub", name="uq_users_google_sub"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(254), unique=True)
-    password_hash: Mapped[str] = mapped_column(String(200))
+    # Vide pour un compte créé via Google : la connexion par mot de passe est alors refusée.
+    password_hash: Mapped[str | None] = mapped_column(String(200))
+    google_sub: Mapped[str | None] = mapped_column(String(64))
     # Copie des clés localStorage synchronisées : {"nextround:demo:favorites": "{...}", ...}
     prefs: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

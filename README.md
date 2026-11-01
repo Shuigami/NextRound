@@ -56,6 +56,8 @@ Le mode se choisit dans `backend/.env` :
 | `PANDASCORE_TOKEN` | Clé API PandaScore. Utilisée **uniquement** par le backend. |
 | `DATABASE_URL` | Connexion PostgreSQL |
 | `SYNC_INTERVAL_MINUTES` | Fréquence de synchronisation (15 par défaut) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Connexion Google facultative (voir plus bas). Vides : le bouton n'apparaît pas. |
+| `PUBLIC_URL` | Adresse du site vue par le navigateur (`http://localhost:3000` par défaut) |
 
 ### Mode démonstration
 
@@ -77,6 +79,19 @@ toujours un passé, un direct et un futur. La démo couvre :
 
 La clé n'est jamais envoyée au navigateur : toutes les requêtes PandaScore partent du backend, qui met les données en cache
 dans PostgreSQL pour tous les utilisateurs.
+
+### Comptes et connexion Google (facultatifs)
+
+Sans compte, tout fonctionne : les favoris restent dans le navigateur. Un compte (e-mail + mot de passe, ou Google) les
+synchronise entre appareils. Une adresse e-mail correspond à un seul compte : se connecter avec Google à l'adresse d'un
+compte e-mail existant relie les deux et **retire le mot de passe** (les adresses ne sont pas vérifiées à l'inscription,
+alors que Google prouve qu'on possède l'adresse).
+
+Pour activer Google :
+
+1. Dans https://console.cloud.google.com, créez un ID client OAuth de type « Application Web ».
+2. URI de redirection autorisée : `http://localhost:3000/api/auth/google/callback` (en production : `{PUBLIC_URL}/api/auth/google/callback`).
+3. Dans `backend/.env` : `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, et `PUBLIC_URL` en production. Redémarrez le backend.
 
 Les données démo et réelles cohabitent en base sans se mélanger : chaque ligne porte sa `source`. Les favoris sont aussi
 stockés séparément pour chaque mode.

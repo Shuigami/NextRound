@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     sync_on_startup: bool = True
     rules_dir: Path = Path(__file__).resolve().parent.parent / "rules"
     cors_origins: str = "http://localhost:3000"
+    # Connexion Google facultative : sans identifiants, le bouton n'apparaît pas.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Adresse vue par le navigateur ; Google y renvoie après connexion ({public_url}/api/auth/google/callback).
+    public_url: str = "http://localhost:3000"
 
     @property
     def source(self) -> str:

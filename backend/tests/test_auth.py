@@ -4,7 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, text
 
-from app.auth import check_password, hash_password
+from app import auth
+from app.auth import GOOGLE_ONLY, check_password, google_user, hash_password
 from app.db import SessionLocal
 from app.main import app
 from app.models import User
@@ -47,3 +48,41 @@ def test_register_sync_logout_login(client):
     assert client.post("/api/auth/login", json={"email": EMAIL, "password": "mauvais!"}).status_code == 401
     r = client.post("/api/auth/login", json={"email": EMAIL, "password": "motdepasse"})
     assert r.json()["prefs"] == prefs
+
+
+def claims(sub="g-test-1"):
+    return {"sub": sub, "email": EMAIL, "email_verified": True}
+
+
+def test_google_account_has_no_password_and_blocks_email_signup(client):
+    with SessionLocal() as s:
+        google_user(s, claims())
+        s.commit()
+    r = client.post("/api/auth/register", json={"email": EMAIL, "password": "motdepasse"})
+    assert r.status_code == 409 and r.json()["detail"] == GOOGLE_ONLY
+    r = client.post("/api/auth/login", json={"email": EMAIL, "password": "motdepasse"})
+    assert r.status_code == 401 and r.json()["detail"] == GOOGLE_ONLY
+
+
+def test_google_link_removes_password_and_its_sessions(client):
+    client.post("/api/auth/register", json={"email": EMAIL, "password": "motdepasse"})
+    assert client.get("/api/me").status_code == 200
+    with SessionLocal() as s:
+        u = google_user(s, claims())
+        assert u.password_hash is None and u.google_sub == "g-test-1"
+        s.commit()
+        assert google_user(s, claims()).id == u.id  # reconnexion : même compte
+    assert client.get("/api/me").status_code == 401, "la session ouverte avec l'ancien mot de passe est fermée"
+    with SessionLocal() as s:
+        with pytest.raises(ValueError):
+            google_user(s, {**claims("g-autre"), "email_verified": False})
+
+
+def test_google_callback_checks_state_then_opens_session(client, monkeypatch):
+    monkeypatch.setattr(auth, "_google_claims", lambda code: claims())
+    r = client.get("/api/auth/google/callback?code=c&state=forge", follow_redirects=False)
+    assert r.headers["location"] == "/compte?erreur=google"
+    client.cookies.set(auth.STATE_COOKIE, "bon", path="/api/auth/google")
+    r = client.get("/api/auth/google/callback?code=c&state=bon", follow_redirects=False)
+    assert r.headers["location"] == "/compte"
+    assert client.get("/api/me").json()["email"] == EMAIL

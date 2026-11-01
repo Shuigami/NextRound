@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Loading } from "@/components/ui";
+import { useApi } from "@/lib/api";
 import { usePrefs } from "@/lib/prefs";
 
 const field = "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm placeholder:text-faint";
@@ -12,8 +13,15 @@ export default function AccountPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Retour de Google en échec ou annulé : le backend renvoie ici avec ?erreur=google.
+  // Lu au premier rendu côté client ; le serveur affiche le chargement, donc pas d'écart d'hydratation.
+  const [error, setError] = useState<string | null>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("erreur") === "google"
+      ? "La connexion Google n'a pas abouti. Réessayez, ou utilisez votre e-mail."
+      : null,
+  );
   const [busy, setBusy] = useState(false);
+  const google = useApi<{ google: boolean }>("/auth/providers").data?.google;
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -80,6 +88,18 @@ export default function AccountPage() {
               </button>
             ))}
           </div>
+          {google && (
+            <>
+              {/* Lien et non fetch : la connexion se fait sur les pages de Google, puis revient ici. */}
+              <a
+                href="/api/auth/google"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold hover:bg-surface-2"
+              >
+                Continuer avec Google
+              </a>
+              <p className="text-center text-xs text-faint">ou avec votre e-mail</p>
+            </>
+          )}
           <label className="block space-y-1">
             <span className="text-sm">Adresse e-mail</span>
             <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
