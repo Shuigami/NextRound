@@ -61,6 +61,7 @@ function MiniMatch({ m }: { m: Match }) {
 export function BracketTree({ matches, columns }: { matches: Match[]; columns: Column[] }) {
   const { hideScore, isTeamFollowed } = usePrefs();
   const box = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const [paths, setPaths] = useState<Path[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [overflow, setOverflow] = useState(false);
@@ -77,6 +78,9 @@ export function BracketTree({ matches, columns }: { matches: Match[]; columns: C
     ...finals.map((r, i) => ({ r, col: firstFinalCol + i, row: lower.length ? "1 / span 2" : "1" })),
   ];
   const cols = Math.max(...cells.map((c) => c.col));
+  // Colonne en cours : la première qui contient encore un match non terminé.
+  const done = (id: number) => ["finished", "canceled"].includes(byId.get(id)?.status ?? "finished");
+  const currentCol = Math.min(...cells.filter((c) => c.r.matches.some((id) => !done(id))).map((c) => c.col));
 
   // Liens « vainqueur » : trait plein si le résultat est connu (et visible), pointillé sinon.
   const links: Link_[] = matches.flatMap((m) =>
@@ -120,44 +124,52 @@ export function BracketTree({ matches, columns }: { matches: Match[]; columns: C
     return () => ro.disconnect();
   }, [linkKey]);
 
+  // Colonne en cours calée à gauche ; le navigateur borne scrollLeft, donc une fin de tableau courte reste collée à droite.
+  useEffect(() => {
+    const cell = box.current?.querySelector<HTMLElement>(`[data-col="${currentCol}"]`);
+    if (cell && scroller.current) scroller.current.scrollLeft = cell.offsetLeft;
+  }, [currentCol]);
+
   return (
-    <div className="overflow-x-auto pb-2">
-      <div
-        ref={box}
-        className="relative grid w-max gap-x-12 gap-y-6"
-        style={{ gridTemplateColumns: `repeat(${cols}, 13.5rem)` }}
-      >
-        <svg className="pointer-events-none absolute inset-0" width={size.w} height={size.h} aria-hidden="true">
-          {paths.map((p, i) => (
-            <path
-              key={i}
-              d={p.d}
-              fill="none"
-              stroke={p.followed ? "var(--warn)" : p.decided ? "var(--muted)" : "var(--line)"}
-              strokeWidth={p.decided ? 1.75 : 1.25}
-              strokeDasharray={p.decided ? undefined : "4 4"}
-            />
-          ))}
-        </svg>
-        {cells.map(({ r, col, row }) => {
-          const ms = r.matches.map((id) => byId.get(id)!).filter(Boolean);
-          return (
-            <div key={r.key} className="flex flex-col" style={{ gridColumn: col, gridRow: row }}>
-              <div className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted">
-                {r.section === "lower" && <Icon name="arrowDownRight" className="size-3.5" />}
-                {r.section === "final" && <Icon name="trophy" className="size-3.5" />}
-                {r.name}
+    <div>
+      <div ref={scroller} className="overflow-x-auto pb-2">
+        <div
+          ref={box}
+          className="relative grid w-max gap-x-12 gap-y-6"
+          style={{ gridTemplateColumns: `repeat(${cols}, 13.5rem)` }}
+        >
+          <svg className="pointer-events-none absolute inset-0" width={size.w} height={size.h} aria-hidden="true">
+            {paths.map((p, i) => (
+              <path
+                key={i}
+                d={p.d}
+                fill="none"
+                stroke={p.followed ? "var(--warn)" : p.decided ? "var(--muted)" : "var(--line)"}
+                strokeWidth={p.decided ? 1.75 : 1.25}
+                strokeDasharray={p.decided ? undefined : "4 4"}
+              />
+            ))}
+          </svg>
+          {cells.map(({ r, col, row }) => {
+            const ms = r.matches.map((id) => byId.get(id)!).filter(Boolean);
+            return (
+              <div key={r.key} data-col={col} className="flex flex-col" style={{ gridColumn: col, gridRow: row }}>
+                <div className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted">
+                  {r.section === "lower" && <Icon name="arrowDownRight" className="size-3.5" />}
+                  {r.section === "final" && <Icon name="trophy" className="size-3.5" />}
+                  {r.name}
+                </div>
+                <div className="flex flex-1 flex-col justify-around gap-3">
+                  {ms.length ? ms.map((m) => <MiniMatch key={m.id} m={m} />) : <p className="text-xs text-faint">Aucun match enregistré.</p>}
+                </div>
               </div>
-              <div className="flex flex-1 flex-col justify-around gap-3">
-                {ms.length ? ms.map((m) => <MiniMatch key={m.id} m={m} />) : <p className="text-xs text-faint">Aucun match enregistré.</p>}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
       {overflow && (
         <p className="mt-1 flex items-center gap-1 text-xs text-muted">
-          Le tableau continue à droite : faites-le défiler <Icon name="arrowRight" className="size-3.5" />
+          Faites défiler le tableau horizontalement pour voir tous les tours.
         </p>
       )}
       {double && (
