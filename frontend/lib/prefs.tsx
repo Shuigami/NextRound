@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { apiGet, type Meta, type Organization, type TeamBrief } from "./api";
-import { type FavKind, type Favorites, followedTeamIds, hasFavorite, isTeamFollowed, parseFavorites, toggleFavorite } from "./favorites";
+import { apiGet, apiSend, type Meta, type Organization, type TeamBrief } from "./api";
+import { type FavKind, type Favorites, followedTeamIds, hasFavorite, isTeamFollowed, mergePrefs, parseFavorites, toggleFavorite } from "./favorites";
 import { editionKey, isRevealed, isScoreHidden, isSlotHidden, matchKey, stripRecord } from "./spoiler";
 
 type Prefs = {
@@ -29,7 +29,13 @@ type Prefs = {
   revealedBy: (m: { id: number; edition: { id: number } }) => "match" | "edition" | null;
   reveal: (kind: "match" | "edition", id: number) => void;
   hide: (kind: "match" | "edition", id: number) => void;
+  /** Compte facultatif : sans lui, tout reste dans ce navigateur. */
+  account: { email: string } | null;
+  signIn: (mode: "login" | "register", email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
 };
+
+type AccountReply = { email: string; prefs: Record<string, string> };
 
 type SpoilerMatch = { id: number; status: string; name?: string | null; edition: { id: number }; previous?: { match_id: number; type: "winner" | "loser" }[] };
 
@@ -62,6 +68,12 @@ function subscribe(cb: () => void) {
     window.removeEventListener("storage", cb);
   };
 }
+// Clés copiées dans le compte quand on est connecté.
+const SYNCED = ["demo", "pandascore"].flatMap((m) => [`nextround:${m}:favorites`, `nextround:${m}:revealed`]).concat("nextround:spoilerFree");
+function snapshot(): Record<string, string> {
+  return Object.fromEntries(SYNCED.flatMap((k) => (read(k) === null ? [] : [[k, read(k)!]])));
+}
+
 function useStored(key: string | null): string | null {
   return useSyncExternalStore(subscribe, () => (key ? read(key) : null), () => null);
 }
@@ -70,17 +82,41 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const [meta, setMeta] = useState<Meta | null>(null);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [account, setAccount] = useState<{ email: string } | null>(null);
+
+  const adopt = useCallback((r: AccountReply) => {
+    const merged = mergePrefs(snapshot(), r.prefs);
+    for (const [k, v] of Object.entries(merged)) if (SYNCED.includes(k)) write(k, v);
+    setAccount({ email: r.email });
+  }, []);
 
   useEffect(() => {
     apiGet<Meta>("/meta").then(setMeta).catch((e) => setMetaError(e.message));
     apiGet<Organization[]>("/organizations").then(setOrgs).catch(() => setOrgs([]));
-  }, []);
+    apiGet<AccountReply>("/me").then(adopt).catch(() => setAccount(null)); // 401 = navigation sans compte
+  }, [adopt]);
 
   // Favoris et révélations séparés par mode : un identifiant démo n'a aucun sens en données réelles.
   const ns = meta ? `nextround:${meta.mode}` : null;
   const favRaw = useStored(ns && `${ns}:favorites`);
   const revealedRaw = useStored(ns && `${ns}:revealed`);
-  const spoilerFree = useStored("nextround:spoilerFree") === "1";
+  const spoilerRaw = useStored("nextround:spoilerFree");
+  const spoilerFree = spoilerRaw === "1";
+
+  // Connecté : chaque changement local est recopié dans le compte. En cas d'échec, le prochain changement renverra tout.
+  useEffect(() => {
+    if (account) apiSend("PUT", "/me/prefs", snapshot()).catch(() => {});
+  }, [account, favRaw, revealedRaw, spoilerRaw]);
+
+  const signIn = useCallback(
+    async (mode: "login" | "register", email: string, password: string) =>
+      adopt(await apiSend<AccountReply>("POST", `/auth/${mode}`, { email, password })),
+    [adopt],
+  );
+  const signOut = useCallback(async () => {
+    await apiSend("POST", "/auth/logout");
+    setAccount(null); // les préférences restent dans ce navigateur
+  }, []);
 
   const favorites = useMemo(() => parseFavorites(favRaw), [favRaw]);
   const revealed = useMemo(() => {
@@ -135,8 +171,11 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
         !spoilerFree ? null : revealed.has(editionKey(m.edition.id)) ? "edition" : revealed.has(matchKey(m.id)) ? "match" : null,
       reveal,
       hide,
+      account,
+      signIn,
+      signOut,
     }),
-    [meta, metaError, ns, favorites, orgs, toggleFav, spoilerFree, setSpoilerFree, revealed, reveal, hide],
+    [meta, metaError, ns, favorites, orgs, toggleFav, spoilerFree, setSpoilerFree, revealed, reveal, hide, account, signIn, signOut],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -44,3 +44,28 @@ export function isTeamFollowed(f: Favorites, t: TeamLike | null | undefined): bo
 export function isEmpty(f: Favorites): boolean {
   return !f.teams.length && !f.orgs.length && !f.editions.length;
 }
+
+const union = <T,>(a: T[], b: T[]): T[] => [...new Set([...a, ...b])];
+
+/** Fusion à la connexion : rien n'est perdu, ni dans ce navigateur ni dans le compte. */
+export function mergePrefs(local: Record<string, string>, account: Record<string, string>): Record<string, string> {
+  const out = { ...account, ...local };
+  for (const k of Object.keys(local)) {
+    if (!(k in account)) continue;
+    if (k.endsWith(":favorites")) {
+      const a = parseFavorites(local[k]), b = parseFavorites(account[k]);
+      out[k] = JSON.stringify({ teams: union(a.teams, b.teams), orgs: union(a.orgs, b.orgs), editions: union(a.editions, b.editions) });
+    } else if (k.endsWith(":revealed")) {
+      const list = (raw: string): string[] => {
+        try {
+          const v = JSON.parse(raw);
+          return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+        } catch {
+          return [];
+        }
+      };
+      out[k] = JSON.stringify(union(list(local[k]), list(account[k])));
+    } else out[k] = account[k]; // simple réglage (anti-spoil) : celui du compte l'emporte
+  }
+  return out;
+}

@@ -156,3 +156,22 @@ class SyncState(Base):
     last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(Text)
     items: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class User(Base):
+    """Compte facultatif : il ne sert qu'à synchroniser les préférences (favoris, anti-spoil) entre appareils."""
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(200))
+    # Copie des clés localStorage synchronisées : {"nextround:demo:favorites": "{...}", ...}
+    prefs: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+    # Empreinte SHA-256 du jeton : une fuite de la base ne donne accès à aucune session.
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

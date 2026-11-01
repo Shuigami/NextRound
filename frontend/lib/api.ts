@@ -151,10 +151,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
+export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, { cache: "no-store" });
+    res = await fetch(`/api${path}`, { cache: "no-store", ...init });
   } catch {
     throw new ApiError(0, "Le serveur NextRound ne répond pas. Vérifiez votre connexion ou que le backend tourne.");
   }
@@ -169,6 +169,10 @@ export async function apiGet<T>(path: string): Promise<T> {
     throw new ApiError(res.status, typeof body?.detail === "string" ? body.detail : fallback);
   }
   return res.json();
+}
+
+export function apiSend<T>(method: "POST" | "PUT", path: string, body?: unknown): Promise<T> {
+  return apiGet<T>(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
 }
 
 /** Chargement simple côté client. */

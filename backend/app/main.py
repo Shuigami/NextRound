@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 
+from . import auth
 from .api import router
 from .config import get_settings
 from .db import SessionLocal
@@ -51,6 +52,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="NextRound API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=get_settings().cors_origins.split(","), allow_methods=["GET"], allow_headers=["*"])
 app.include_router(router)
+app.include_router(auth.router)
 
 
 @app.get("/health")

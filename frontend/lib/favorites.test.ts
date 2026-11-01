@@ -1,7 +1,7 @@
 // Lancer avec : npm test (node --test, types retirés nativement par Node ≥ 23.6)
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EMPTY_FAVORITES, followedTeamIds, isTeamFollowed, parseFavorites, toggleFavorite } from "./favorites.ts";
+import { EMPTY_FAVORITES, followedTeamIds, isTeamFollowed, mergePrefs, parseFavorites, toggleFavorite } from "./favorites.ts";
 import { columnsFromLinks } from "./bracket.ts";
 import { isScoreHidden, isSlotHidden, stripRecord } from "./spoiler.ts";
 
@@ -109,4 +109,14 @@ test("tableau sans règlement : un quart avec têtes de série reste dans la col
     ["Tableau principal · Demi-finale", [21, 22]],
     ["Tableau principal · Finale", [31]],
   ]);
+});
+
+test("la connexion fusionne favoris et révélations sans rien perdre", () => {
+  const local = { "nextround:demo:favorites": '{"teams":[1,2],"orgs":[],"editions":[]}', "nextround:demo:revealed": '["m:1"]', "nextround:spoilerFree": "0" };
+  const account = { "nextround:demo:favorites": '{"teams":[2,3],"orgs":[9],"editions":[]}', "nextround:pandascore:favorites": "x", "nextround:spoilerFree": "1" };
+  const m = mergePrefs(local, account);
+  assert.deepEqual(parseFavorites(m["nextround:demo:favorites"]), { teams: [1, 2, 3], orgs: [9], editions: [] });
+  assert.equal(m["nextround:demo:revealed"], '["m:1"]');
+  assert.equal(m["nextround:pandascore:favorites"], "x");
+  assert.equal(m["nextround:spoilerFree"], "1");
 });

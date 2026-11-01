@@ -7,7 +7,7 @@ import { type EditionBrief, useApi } from "@/lib/api";
 import { usePrefs } from "@/lib/prefs";
 
 export default function FavoritesPage() {
-  const { favorites, orgs, ready, meta } = usePrefs();
+  const { favorites, orgs, ready, meta, account } = usePrefs();
   const editions = useApi<EditionBrief[]>("/editions");
   const teams = orgs.flatMap((o) => o.teams);
   const followedOrgs = orgs.filter((o) => favorites.orgs.includes(o.id));
@@ -20,7 +20,17 @@ export default function FavoritesPage() {
       <div className="space-y-1">
         <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Favoris</h1>
         <p className="text-sm text-muted">
-          Enregistrés dans ce navigateur, sans compte
+          {account ? (
+            <>Synchronisés avec votre compte ({account.email})</>
+          ) : (
+            <>
+              Enregistrés dans ce navigateur, sans compte.{" "}
+              <Link href="/compte" className="underline hover:text-text">
+                Créez un compte
+              </Link>{" "}
+              pour les retrouver sur vos autres appareils
+            </>
+          )}
           {meta?.mode === "demo" ? ". Les favoris du mode démo sont séparés de ceux des données réelles." : "."}
         </p>
       </div>

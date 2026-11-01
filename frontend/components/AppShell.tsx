@@ -32,6 +32,21 @@ function SpoilerToggle() {
   );
 }
 
+function AccountLink() {
+  const { account } = usePrefs();
+  return (
+    <Link
+      href="/compte"
+      title={account ? `Connecté : ${account.email}` : "Compte facultatif, pour retrouver vos favoris sur tous vos appareils"}
+      className="flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm text-muted hover:text-text"
+    >
+      <Icon name="user" />
+      <span className="hidden max-w-40 truncate sm:inline">{account ? account.email : "Se connecter"}</span>
+      <span className="sr-only sm:hidden">{account ? "Mon compte" : "Se connecter"}</span>
+    </Link>
+  );
+}
+
 function Banners() {
   const { meta, metaError } = usePrefs();
   if (metaError)
@@ -90,8 +105,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ))}
             </ul>
           </nav>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <SpoilerToggle />
+            <AccountLink />
           </div>
         </div>
       </header>
