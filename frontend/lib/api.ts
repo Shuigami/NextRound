@@ -171,7 +171,7 @@ export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export function apiSend<T>(method: "POST" | "PUT", path: string, body?: unknown): Promise<T> {
+export function apiSend<T>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<T> {
   return apiGet<T>(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
 }
 

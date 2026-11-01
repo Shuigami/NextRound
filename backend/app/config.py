@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     # Adresse vue par le navigateur ; Google y renvoie après connexion ({public_url}/api/auth/google/callback).
     public_url: str = "http://localhost:3000"
+    # Envoi des e-mails (vérification, mot de passe oublié). Sans SMTP_HOST, ils sont écrits dans les logs du backend.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    mail_from: str = "NextRound <no-reply@localhost>"
 
     @property
     def source(self) -> str:

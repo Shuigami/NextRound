@@ -47,6 +47,15 @@ export function StatusTag({ status }: { status: MatchStatus }) {
 }
 
 /** Logo d'équipe avec avatar de secours (initiales + couleur stable) si l'image manque ou échoue. */
+/** Photo de profil ronde ; sans photo, les initiales colorées de TeamLogo. */
+export function Avatar({ name, src, size = 32 }: { name: string; src: string | null; size?: number }) {
+  return (
+    <span className="inline-flex shrink-0 overflow-hidden rounded-full [&>img]:object-cover">
+      <TeamLogo name={name} src={src} size={size} />
+    </span>
+  );
+}
+
 export function TeamLogo({ name, src, size = 32 }: { name: string; src: string | null; size?: number }) {
   const [broken, setBroken] = useState(false);
   if (src && !broken)

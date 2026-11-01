@@ -57,7 +57,8 @@ Le mode se choisit dans `backend/.env` :
 | `DATABASE_URL` | Connexion PostgreSQL |
 | `SYNC_INTERVAL_MINUTES` | Fréquence de synchronisation (15 par défaut) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Connexion Google facultative (voir plus bas). Vides : le bouton n'apparaît pas. |
-| `PUBLIC_URL` | Adresse du site vue par le navigateur (`http://localhost:3000` par défaut) |
+| `PUBLIC_URL` | Adresse du site vue par le navigateur (`http://localhost:3000` par défaut), utilisée dans les liens envoyés par e-mail |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Envoi des e-mails de compte. Sans `SMTP_HOST`, ils s'affichent dans la console du backend. |
 
 ### Mode démonstration
 
@@ -83,9 +84,15 @@ dans PostgreSQL pour tous les utilisateurs.
 ### Comptes et connexion Google (facultatifs)
 
 Sans compte, tout fonctionne : les favoris restent dans le navigateur. Un compte (e-mail + mot de passe, ou Google) les
-synchronise entre appareils. Une adresse e-mail correspond à un seul compte : se connecter avec Google à l'adresse d'un
-compte e-mail existant relie les deux et **retire le mot de passe** (les adresses ne sont pas vérifiées à l'inscription,
-alors que Google prouve qu'on possède l'adresse).
+synchronise entre appareils, avec un nom d'utilisateur et une photo de profil facultatifs.
+
+- **Vérification de l'adresse** : un lien (valable 48 h) est envoyé à l'inscription, et peut être renvoyé depuis la page Compte.
+- **Mot de passe oublié** : un lien (valable 1 h) permet d'en choisir un nouveau. Il ferme toutes les sessions ouvertes,
+  et sert aussi à ajouter un mot de passe à un compte Google.
+- **Une adresse = un compte.** Se connecter avec Google à l'adresse d'un compte e-mail existant relie les deux. Si cette
+  adresse n'a jamais été vérifiée, le mot de passe est **retiré** : quelqu'un d'autre a pu l'inscrire avec un mot de passe à lui.
+
+En développement, sans `SMTP_HOST`, les liens s'affichent dans la console du backend.
 
 Pour activer Google :
 

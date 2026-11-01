@@ -6,7 +6,7 @@ cohabitent sans jamais se mélanger, et un autre fournisseur pourra être ajout�
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -161,12 +161,22 @@ class SyncState(Base):
 class User(Base):
     """Compte facultatif : il ne sert qu'à synchroniser les préférences (favoris, anti-spoil) entre appareils."""
     __tablename__ = "users"
-    __table_args__ = (UniqueConstraint("google_sub", name="uq_users_google_sub"),)
+    __table_args__ = (
+        UniqueConstraint("google_sub", name="uq_users_google_sub"),
+        UniqueConstraint("username", name="uq_users_username"),
+    )
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(254), unique=True)
     # Vide pour un compte créé via Google : la connexion par mot de passe est alors refusée.
     password_hash: Mapped[str | None] = mapped_column(String(200))
     google_sub: Mapped[str | None] = mapped_column(String(64))
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Toujours en minuscules : l'unicité ignore ainsi la casse.
+    username: Mapped[str | None] = mapped_column(String(20))
+    # Photo de profil, recadrée en 256 px par le navigateur. Différée : chargée seulement quand on la sert.
+    avatar: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    avatar_type: Mapped[str | None] = mapped_column(String(20))
+    avatar_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     # Copie des clés localStorage synchronisées : {"nextround:demo:favorites": "{...}", ...}
     prefs: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -177,4 +187,14 @@ class AuthSession(Base):
     # Empreinte SHA-256 du jeton : une fuite de la base ne donne accès à aucune session.
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class EmailToken(Base):
+    """Lien à usage unique envoyé par e-mail : vérification de l'adresse ou réinitialisation du mot de passe."""
+    __tablename__ = "email_tokens"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(10))  # verify | reset
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

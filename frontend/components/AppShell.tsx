@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { fmtRelative } from "@/lib/format";
 import { usePrefs } from "@/lib/prefs";
 import { Icon, type IconName } from "./Icon";
+import { Avatar } from "./ui";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Accueil", icon: "home" },
@@ -40,8 +41,8 @@ function AccountLink() {
       title={account ? `Connecté : ${account.email}` : "Compte facultatif, pour retrouver vos favoris sur tous vos appareils"}
       className="flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-sm text-muted hover:text-text"
     >
-      <Icon name="user" />
-      <span className="hidden max-w-40 truncate sm:inline">{account ? account.email : "Se connecter"}</span>
+      {account ? <Avatar name={account.username ?? account.email} src={account.avatar_url} size={20} /> : <Icon name="user" />}
+      <span className="hidden max-w-40 truncate sm:inline">{account ? (account.username ? `@${account.username}` : account.email) : "Se connecter"}</span>
       <span className="sr-only sm:hidden">{account ? "Mon compte" : "Se connecter"}</span>
     </Link>
   );

@@ -30,12 +30,24 @@ type Prefs = {
   reveal: (kind: "match" | "edition", id: number) => void;
   hide: (kind: "match" | "edition", id: number) => void;
   /** Compte facultatif : sans lui, tout reste dans ce navigateur. */
-  account: { email: string } | null;
+  account: Account | null;
   signIn: (mode: "login" | "register", email: string, password: string) => Promise<void>;
+  /** Ouvre la session renvoyée par le serveur (connexion, réinitialisation du mot de passe). */
+  startSession: (r: AccountReply) => void;
+  /** Profil modifié (nom, photo) : la session ne change pas. */
+  setAccount: (a: Account) => void;
   signOut: () => Promise<void>;
 };
 
-type AccountReply = { email: string; prefs: Record<string, string> };
+export type Account = {
+  email: string;
+  username: string | null;
+  email_verified: boolean;
+  has_password: boolean;
+  google: boolean;
+  avatar_url: string | null;
+};
+export type AccountReply = Account & { prefs: Record<string, string> };
 
 type SpoilerMatch = { id: number; status: string; name?: string | null; edition: { id: number }; previous?: { match_id: number; type: "winner" | "loser" }[] };
 
@@ -82,12 +94,13 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const [meta, setMeta] = useState<Meta | null>(null);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [orgs, setOrgs] = useState<Organization[]>([]);
-  const [account, setAccount] = useState<{ email: string } | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
+  const signedIn = account !== null;
 
-  const adopt = useCallback((r: AccountReply) => {
-    const merged = mergePrefs(snapshot(), r.prefs);
+  const adopt = useCallback(({ prefs, ...acc }: AccountReply) => {
+    const merged = mergePrefs(snapshot(), prefs);
     for (const [k, v] of Object.entries(merged)) if (SYNCED.includes(k)) write(k, v);
-    setAccount({ email: r.email });
+    setAccount(acc);
   }, []);
 
   useEffect(() => {
@@ -105,8 +118,8 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
 
   // Connecté : chaque changement local est recopié dans le compte. En cas d'échec, le prochain changement renverra tout.
   useEffect(() => {
-    if (account) apiSend("PUT", "/me/prefs", snapshot()).catch(() => {});
-  }, [account, favRaw, revealedRaw, spoilerRaw]);
+    if (signedIn) apiSend("PUT", "/me/prefs", snapshot()).catch(() => {});
+  }, [signedIn, favRaw, revealedRaw, spoilerRaw]);
 
   const signIn = useCallback(
     async (mode: "login" | "register", email: string, password: string) =>
@@ -173,9 +186,11 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
       hide,
       account,
       signIn,
+      startSession: adopt,
+      setAccount,
       signOut,
     }),
-    [meta, metaError, ns, favorites, orgs, toggleFav, spoilerFree, setSpoilerFree, revealed, reveal, hide, account, signIn, signOut],
+    [meta, metaError, ns, favorites, orgs, toggleFav, spoilerFree, setSpoilerFree, revealed, reveal, hide, account, signIn, adopt, signOut],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
